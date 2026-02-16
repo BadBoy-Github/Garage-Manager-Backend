@@ -12,7 +12,6 @@ const corsOptions = {
     credentials: true
 };
 
-
 // Middleware
 app.use(cors(corsOptions));
 app.use(express.json());
@@ -45,30 +44,10 @@ const RepairSchema = new mongoose.Schema({
 const Customer = mongoose.model('Customer', CustomerSchema);
 const Repair = mongoose.model('Repair', RepairSchema);
 
-let isConnected = false;
-
-const connectDB = async () => {
-    if (isConnected) return;
-
-    try {
-        await mongoose.connect(process.env.MONGODB_URI, {
-            serverSelectionTimeoutMS: 5000,
-            socketTimeoutMS: 45000,
-            maxPoolSize: 10,
-            bufferCommands: false
-        });
-        isConnected = true;
-        console.log('MongoDB Connected');
-    } catch (err) {
-        console.error('MongoDB connection error:', err);
-    }
-};
-
 // --- API Routes ---
 
 // Get Stats
 app.get('/api/stats', async (req, res) => {
-    await connectDB();
     try {
         const total = await Repair.countDocuments();
         const active = await Repair.countDocuments({ status: 'In Progress' });
@@ -95,7 +74,6 @@ app.get('/api/stats', async (req, res) => {
 
 // Get all customers
 app.get('/api/customers', async (req, res) => {
-    await connectDB();
     try {
         const customers = await Customer.find().sort({ createdAt: -1 });
         res.json(customers);
@@ -106,7 +84,6 @@ app.get('/api/customers', async (req, res) => {
 
 // Get single customer
 app.get('/api/customers/:id', async (req, res) => {
-    await connectDB();
     try {
         const customer = await Customer.findById(req.params.id);
         if (!customer) {
@@ -120,7 +97,6 @@ app.get('/api/customers/:id', async (req, res) => {
 
 // Create customer
 app.post('/api/customers', async (req, res) => {
-    await connectDB();
     try {
         const { email, phone } = req.body;
 
@@ -150,7 +126,6 @@ app.post('/api/customers', async (req, res) => {
 
 // Update customer
 app.put('/api/customers/:id', async (req, res) => {
-    await connectDB();
     try {
         const { email, phone } = req.body;
 
@@ -192,7 +167,6 @@ app.put('/api/customers/:id', async (req, res) => {
 
 // Delete customer
 app.delete('/api/customers/:id', async (req, res) => {
-    await connectDB();
     try {
         const customer = await Customer.findByIdAndDelete(req.params.id);
         if (!customer) {
@@ -210,7 +184,6 @@ app.delete('/api/customers/:id', async (req, res) => {
 
 // Get all repairs
 app.get('/api/repairs', async (req, res) => {
-    await connectDB();
     try {
         const repairs = await Repair.find().populate('customerId').sort({ date: -1 });
         res.json(repairs);
@@ -221,7 +194,6 @@ app.get('/api/repairs', async (req, res) => {
 
 // Get single repair
 app.get('/api/repairs/:id', async (req, res) => {
-    await connectDB();
     try {
         const repair = await Repair.findById(req.params.id).populate('customerId');
         if (!repair) {
@@ -235,7 +207,6 @@ app.get('/api/repairs/:id', async (req, res) => {
 
 // Create repair
 app.post('/api/repairs', async (req, res) => {
-    await connectDB();
     try {
         const repair = new Repair(req.body);
         await repair.save();
@@ -247,7 +218,6 @@ app.post('/api/repairs', async (req, res) => {
 
 // Update repair
 app.put('/api/repairs/:id', async (req, res) => {
-    await connectDB();
     try {
         const repair = await Repair.findByIdAndUpdate(
             req.params.id,
@@ -265,7 +235,6 @@ app.put('/api/repairs/:id', async (req, res) => {
 
 // Update repair status only
 app.patch('/api/repairs/:id/status', async (req, res) => {
-    await connectDB();
     try {
         const { status } = req.body;
         const repair = await Repair.findByIdAndUpdate(
@@ -284,7 +253,6 @@ app.patch('/api/repairs/:id/status', async (req, res) => {
 
 // Delete repair
 app.delete('/api/repairs/:id', async (req, res) => {
-    await connectDB();
     try {
         const repair = await Repair.findByIdAndDelete(req.params.id);
         if (!repair) {
@@ -300,7 +268,6 @@ app.delete('/api/repairs/:id', async (req, res) => {
 
 // Search repairs
 app.get('/api/search/repairs', async (req, res) => {
-    await connectDB();
     try {
         const { q } = req.query;
         const costQuery = !isNaN(q) ? parseFloat(q) : null;
@@ -329,7 +296,6 @@ app.get('/api/search/repairs', async (req, res) => {
 
 // Search customers
 app.get('/api/search/customers', async (req, res) => {
-    await connectDB();
     try {
         const { q } = req.query;
         const customers = await Customer.find({
@@ -346,16 +312,14 @@ app.get('/api/search/customers', async (req, res) => {
 });
 
 // Health check
-app.get('/api/health', async (req, res) => {
-    await connectDB();
+app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 // ============ AUTHENTICATION ============
 
 // Admin login
-app.post('/api/auth/login', async (req, res) => {
-    await connectDB();
+app.post('/api/auth/login', (req, res) => {
     try {
         const { email, password } = req.body;
 
@@ -376,8 +340,7 @@ app.post('/api/auth/login', async (req, res) => {
 });
 
 // Get admin info
-app.get('/api/auth/admin', async (req, res) => {
-    await connectDB();
+app.get('/api/auth/admin', (req, res) => {
     try {
         res.json({
             email: process.env.ADMIN_EMAIL,
@@ -389,15 +352,12 @@ app.get('/api/auth/admin', async (req, res) => {
 });
 
 // Update admin name
-app.put('/api/auth/admin/name', async (req, res) => {
-    await connectDB();
+app.put('/api/auth/admin/name', (req, res) => {
     try {
         const { name } = req.body;
         if (!name) {
             return res.status(400).json({ error: 'Name is required' });
         }
-        // Note: In production, you'd write this to a file or database
-        // For now, we'll just return success (the name change won't persist across restarts)
         res.json({ success: true, name });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -405,4 +365,4 @@ app.put('/api/auth/admin/name', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}\nlocalhost:${PORT}`));
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
