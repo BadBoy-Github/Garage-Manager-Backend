@@ -8,9 +8,10 @@ const app = express();
 
 // CORS Configuration
 const corsOptions = {
-    origin: process.env.ALLOWED_ORIGIN || ['http://localhost:5173', 'http://localhost:3000'],
+    origin: ['http://localhost:5173', 'http://localhost:3000', 'https://garage-manager-frontend.vercel.app'],
     credentials: true
 };
+
 
 // Middleware
 app.use(cors(corsOptions));
@@ -404,4 +405,4 @@ app.put('/api/auth/admin/name', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Server running on port ${PORT}\nlocalhost:${PORT}`));
